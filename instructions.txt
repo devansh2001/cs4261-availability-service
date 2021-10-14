@@ -1,0 +1,23 @@
+Intall Heroku:
+brew tap heroku/brew && brew install heroku
+
+Login to Heroku:
+heroku container:login
+
+Build the Docker Service: (In the directory with the Docker file)
+docker build -t availability-service .
+
+Heroku Deployment
+docker tag availability-service registry.heroku.com/cs4261-availability-service/web
+docker push registry.heroku.com/cs4261-availability-service/web
+heroku container:release web -a cs4261-availability-service
+
+Docker Logs:
+heroku logs --tail --app cs4261-availability-service
+
+Environment Variable:
+Key: DATABASE_URL
+Value: postgres://mcvwodrvbmtrfr:e607b5ffce4827b53fd7e7c40254c0f894189fa73314a1b98aae8881822addff@ec2-107-20-24-247.compute-1.amazonaws.com:5432/d6t1raa6o61289
+
+Testing Commands
+curl -XGET https://cs4261-availability-service.herokuapp.com/health-check
