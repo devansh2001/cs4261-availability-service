@@ -24,13 +24,13 @@ try:
         service_id varchar(64),
         user_id varchar(64),
         minimum_price varchar(64),
-        is_monday integer,
-        is_tuesday integer,
-        is_wednesday integer,
-        is_thursday integer,
-        is_friday integer,
-        is_saturday integer,
-        is_sunday integer,
+        is_monday varchar(2),
+        is_tuesday varchar(2),
+        is_wednesday varchar(2),
+        is_thursday varchar(2),
+        is_friday varchar(2),
+        is_saturday varchar(2),
+        is_sunday varchar(2),
         PRIMARY KEY (service_id, user_id)
     );
     ''')
@@ -42,22 +42,21 @@ def health_check():
     return {'status': 200, 'message': "Availability"}
 
 @app.route('/availability/add-availabilty', methods=['POST'])
-def create_review():
+def create_availability():
     data = request.get_json()
-    service_id = data['service_id']
-    user_id = data['user_id']
-    min_price = data['minimum_price']
-    is_monday = 1 if 'monday' in data['availability'] else 0
-    is_tuesday = 1 if 'tuesday' in data['availability'] else 0
-    is_wednesday = 1 if 'wednesday' in data['availability'] else 0
-    is_thursday = 1 if 'thursday' in data['availability'] else 0
-    is_friday = 1 if 'friday' in data['availability'] else 0
-    is_saturday = 1 if 'saturday' in data['availability'] else 0
-    is_sunday = 1 if 'sunday' in data['availability'] else 0
-    
+    service_id = str(data['service_id'])
+    user_id = str(data['user_id'])
+    min_price = str(data['minimum_price'])
+    is_monday = "1" if 'monday' in data['availability'] else "0"
+    is_tuesday = "1" if 'tuesday' in data['availability'] else "0"
+    is_wednesday = "1" if 'wednesday' in data['availability'] else "0"
+    is_thursday = "1" if 'thursday' in data['availability'] else "0"
+    is_friday = "1" if 'friday' in data['availability'] else "0"
+    is_saturday = "1" if 'saturday' in data['availability'] else "0"
+    is_sunday = "1" if 'sunday' in data['availability'] else "0"
     query = '''
-        INSERT INTO availability (service_id, user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_friday, is_saturday, is_sunday)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO availability (service_id, user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
     cursor.execute(query, [service_id, user_id, min_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday])
     conn.commit()
@@ -66,10 +65,10 @@ def create_review():
 @app.route('/availability/delete-availability/<service_id>/<user_id>', methods=['DELETE'])
 def delete_availability(service_id, user_id):
     query = '''
-        SELECT * FROM avalability WHERE a.service_id=%s and a.user_id=%s
+        SELECT * FROM availability as a WHERE a.service_id=%s and a.user_id=%s
     '''
     cursor.execute(query, [str(service_id), str(user_id)])
-    res = cursor.fetch()
+    res = cursor.fetchone()
     query = '''
         DELETE FROM availability as a WHERE a.service_id=%s and a.user_id=%s
     '''
@@ -80,27 +79,27 @@ def delete_availability(service_id, user_id):
 @app.route('/get-availability/<service_id>/<user_id>')
 def get_availability(service_id, user_id):
     query = '''
-           SELECT * FROM avalability WHERE a.service_id=%s and a.user_id=%s
+           SELECT * FROM availability as a WHERE a.service_id=%s and a.user_id=%s
        '''
     cursor.execute(query, [str(service_id), str(user_id)])
-    res = cursor.fetch()
+    res = cursor.fetchone()
     return {'status': 201, 'reviews': publish_availability(res)}
 
 # Helper functions
 def publish_availability(availability):
-    if len(availability) == 0:
+    if not availability or len(availability) == 0:
         return None
     res = {
-        "service_id": availability['service_id'],
-        'user_id': availability['user_id'],
-        'minimum_price': availability['minimum_price'],
-        'is_monday': True if availability['is_monday'] == 1 else False,
-        'is_tuesday' : True if availability['is_tuesday'] == 1 else False,
-        'is_wednesday' : True if availability['is_wednesday'] == 1 else False,
-        'is_thursday' : True if availability['is_thursday'] == 1 else False,
-        'is_friday' : True if availability['is_friday'] == 1 else False,
-        'is_saturday' : True if availability['is_saturday'] == 1 else False,
-        'is_sunday' : True if availability['is_sunday'] == 1 else False,
+        "service_id": availability[0],
+        'user_id': availability[1],
+        'minimum_price': availability[2],
+        'is_monday': True if availability[3] == 1 else False,
+        'is_tuesday': True if availability[4] == 1 else False,
+        'is_wednesday': True if availability[5] == 1 else False,
+        'is_thursday': True if availability[6] == 1 else False,
+        'is_friday': True if availability[7] == 1 else False,
+        'is_saturday': True if availability[8] == 1 else False,
+        'is_sunday': True if availability[9] == 1 else False,
     }
     return res
 
