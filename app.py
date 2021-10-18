@@ -84,6 +84,16 @@ def get_availability(service_id, user_id):
     cursor.execute(query, [str(service_id), str(user_id)])
     res = cursor.fetchone()
     return {'status': 201, 'reviews': publish_availability(res)}
+@app.route('/get-availability/<service-id>')
+def get_providers(service_id):
+    query = '''
+    SELECT * from availability as a where a.service_id = %s
+    '''
+    cursor.execute(query, [str(service_id)])
+    ans = []
+    for res in cursor.fetchall():
+        ans.append(publish_availability(res))
+    return {'status': 201, 'availability': ans}
 
 # Helper functions
 def publish_availability(availability):
