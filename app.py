@@ -65,7 +65,7 @@ def create_availability():
 @app.route('/availability/delete-availability/<service_id>/<user_id>', methods=['DELETE'])
 def delete_availability(service_id, user_id):
     query = '''
-        SELECT service_id, s.user_id, min_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+        SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
          FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s and a.user_id=%s
     '''
     cursor.execute(query, [str(service_id), str(user_id)])
@@ -80,16 +80,16 @@ def delete_availability(service_id, user_id):
 @app.route('/get-availability/<service_id>/<user_id>')
 def get_availability(service_id, user_id):
     query = '''
-            SELECT service_id, s.user_id, min_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+            SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
              FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s and a.user_id=%s
         '''
     cursor.execute(query, [str(service_id), str(user_id)])
     res = cursor.fetchone()
-    return {'status': 201, 'reviews': publish_availability(res)}
+    return {'status': 201, 'availability': publish_availability(res)}
 @app.route('/get-availability/<service_id>')
 def get_providers(service_id):
     query = '''
-            SELECT service_id, s.user_id, min_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+            SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
              FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s
         '''
     cursor.execute(query, [str(service_id)])
