@@ -24,13 +24,7 @@ try:
         service_id varchar(64),
         user_id varchar(64),
         minimum_price varchar(64),
-        is_monday varchar(2),
-        is_tuesday varchar(2),
-        is_wednesday varchar(2),
-        is_thursday varchar(2),
-        is_friday varchar(2),
-        is_saturday varchar(2),
-        is_sunday varchar(2),
+        availability varchar(2048),
         PRIMARY KEY (service_id, user_id)
     );
     ''')
@@ -47,25 +41,26 @@ def create_availability():
     service_id = str(data['service_id'])
     user_id = str(data['user_id'])
     min_price = str(data['minimum_price'])
-    is_monday = "1" if 'monday' in data['availability'] else "0"
-    is_tuesday = "1" if 'tuesday' in data['availability'] else "0"
-    is_wednesday = "1" if 'wednesday' in data['availability'] else "0"
-    is_thursday = "1" if 'thursday' in data['availability'] else "0"
-    is_friday = "1" if 'friday' in data['availability'] else "0"
-    is_saturday = "1" if 'saturday' in data['availability'] else "0"
-    is_sunday = "1" if 'sunday' in data['availability'] else "0"
+    # is_monday = "1" if 'monday' in data['availability'] else "0"
+    # is_tuesday = "1" if 'tuesday' in data['availability'] else "0"
+    # is_wednesday = "1" if 'wednesday' in data['availability'] else "0"
+    # is_thursday = "1" if 'thursday' in data['availability'] else "0"
+    # is_friday = "1" if 'friday' in data['availability'] else "0"
+    # is_saturday = "1" if 'saturday' in data['availability'] else "0"
+    # is_sunday = "1" if 'sunday' in data['availability'] else "0"
+    availability = str(data['availability'])
     query = '''
-        INSERT INTO availability (service_id, user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO availability (service_id, user_id, minimum_price, availability)
+        VALUES (%s, %s, %s, %s)
     '''
-    cursor.execute(query, [service_id, user_id, min_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday])
+    cursor.execute(query, [service_id, user_id, min_price, availability])
     conn.commit()
     return {'status': 201, 'service_id': service_id, 'user_id': user_id}
 
 @app.route('/availability/delete-availability/<service_id>/<user_id>', methods=['DELETE'])
 def delete_availability(service_id, user_id):
     query = '''
-        SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+        SELECT service_id, s.user_id, minimum_price, availability, fname, lname
          FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s and a.user_id=%s
     '''
     cursor.execute(query, [str(service_id), str(user_id)])
@@ -80,19 +75,32 @@ def delete_availability(service_id, user_id):
 @app.route('/get-availability/<service_id>/<user_id>')
 def get_availability(service_id, user_id):
     query = '''
-            SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+            SELECT service_id, s.user_id, minimum_price, availability, fname, lname
              FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s and a.user_id=%s
         '''
     cursor.execute(query, [str(service_id), str(user_id)])
     res = cursor.fetchone()
     return {'status': 201, 'availability': publish_availability(res)}
+
 @app.route('/get-availability/<service_id>')
 def get_providers(service_id):
     query = '''
-            SELECT service_id, s.user_id, minimum_price, is_monday, is_tuesday, is_wednesday, is_thursday, is_friday, is_saturday, is_sunday, fname, lname
+            SELECT service_id, s.user_id, minimum_price, availability, fname, lname
              FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s
         '''
     cursor.execute(query, [str(service_id)])
+    ans = []
+    for res in cursor.fetchall():
+        ans.append(publish_availability(res))
+    return {'status': 201, 'availability': ans}
+
+@app.route('/get-all-availability')
+def get_all():
+    query = '''
+            SELECT service_id, s.user_id, minimum_price, availability, fname, lname
+             FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id
+        '''
+    cursor.execute(query, [])
     ans = []
     for res in cursor.fetchall():
         ans.append(publish_availability(res))
@@ -106,15 +114,9 @@ def publish_availability(availability):
         "service_id": availability[0],
         'user_id': availability[1],
         'minimum_price': availability[2],
-        'is_monday': True if availability[3] == 1 else False,
-        'is_tuesday': True if availability[4] == 1 else False,
-        'is_wednesday': True if availability[5] == 1 else False,
-        'is_thursday': True if availability[6] == 1 else False,
-        'is_friday': True if availability[7] == 1 else False,
-        'is_saturday': True if availability[8] == 1 else False,
-        'is_sunday': True if availability[9] == 1 else False,
-        'fname': availability[10],
-        'lname': availability[11]
+        'availability': availability[3],
+        'fname': availability[4],
+        'lname': availability[5]
     }
     return res
 
