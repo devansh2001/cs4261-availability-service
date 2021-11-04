@@ -85,8 +85,8 @@ def get_availability(service_id, user_id):
 @app.route('/get-availability/<service_id>')
 def get_providers(service_id):
     query = '''
-            SELECT service_id, s.user_id, minimum_price, availability, fname, lname
-             FROM availability as a join (Select fname, lname, user_id from users) as s on s.user_id = a.user_id WHERE a.service_id=%s
+            SELECT service_id, s.user_id, minimum_price, availability, fname, lname, s.profile_picture_url
+             FROM availability as a join (Select fname, lname, user_id, profile_picture_url from users) as s on s.user_id = a.user_id WHERE a.service_id=%s
         '''
     cursor.execute(query, [str(service_id)])
     ans = []
@@ -118,6 +118,10 @@ def publish_availability(availability):
         'fname': availability[4],
         'lname': availability[5]
     }
+
+    if len(availability) >= 7:
+        res['profile_picture'] = availability[6]
+    
     return res
 
 # https://www.youtube.com/watch?v=4eQqcfQIWXw
