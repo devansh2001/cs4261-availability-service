@@ -48,14 +48,18 @@ def create_availability():
     # is_friday = "1" if 'friday' in data['availability'] else "0"
     # is_saturday = "1" if 'saturday' in data['availability'] else "0"
     # is_sunday = "1" if 'sunday' in data['availability'] else "0"
-    availability = str(data['availability'])
+    availability = dict(data['availability'])
+    for k in availability:
+        if type(availability[k]) == str:
+            availability[k] = list(availability[k].split(","))
+    availability = str(availability)
     query = '''
         INSERT INTO availability (service_id, user_id, minimum_price, availability)
         VALUES (%s, %s, %s, %s)
     '''
     cursor.execute(query, [service_id, user_id, min_price, availability])
     conn.commit()
-    return {'status': 201, 'service_id': service_id, 'user_id': user_id}
+    return {'status': 201, 'service_id': service_id, 'user_id': user_id, "debug": availability}
 
 @app.route('/availability/delete-availability/<service_id>/<user_id>', methods=['DELETE'])
 def delete_availability(service_id, user_id):
