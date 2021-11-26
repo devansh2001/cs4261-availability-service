@@ -129,6 +129,7 @@ def get_providers(service_id):
         debug.append((res, res_2, user_id))
         ans.append(publish_availability(res, res_2))
     return {'status': 201, 'availability': ans, "debug": debug}
+
 @app.route('/get-filtered-availability/<service_id>/<min_price>/<day>/<start_time>/<end_time>')
 def get_filtered_availability(service_id, min_price, day, start_time, end_time):
     if min_price.isnumeric():
