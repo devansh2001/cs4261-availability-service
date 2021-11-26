@@ -32,7 +32,7 @@ try:
     CREATE TABLE IF NOT EXISTS availability_times (
         service_id varchar(64),
         user_id varchar(64),
-        `day` varchar(64),
+        day_name varchar(64),
         start_time varchar(10),
         end_time varchar(10)
     );
@@ -60,12 +60,13 @@ def create_availability():
     '''
     cursor.execute(query, [service_id, user_id, min_price])
     for k in availability.keys():
-        st, et = availability[k].split('-')
-        query = '''
-                INSERT INTO availability_times (service_id, user_id, `day`, start_time, end_time)
-                VALUES (%s, %s, %s, %s, %s)
-            '''
-        cursor.execute(query, [service_id, user_id, k, st, et])
+        for a in availability[k]:
+            st, et = a.split('-')
+            query = '''
+                    INSERT INTO availability_times (service_id, user_id, day_name, start_time, end_time)
+                    VALUES (%s, %s, %s, %s, %s)
+                '''
+            cursor.execute(query, [service_id, user_id, k, st, et])
     conn.commit()
     return {'status': 201, 'service_id': service_id, 'user_id': user_id, "debug": availability}
 
@@ -78,7 +79,7 @@ def delete_availability(service_id, user_id):
     cursor.execute(query, [str(service_id), str(user_id)])
     res = cursor.fetchone()
     query = '''
-        Select service_id, user_id, `day`, start_time, end_time from availability_times where user_id = %s and service_id = %s
+        Select service_id, user_id, day_name, start_time, end_time from availability_times where service_id = %s and user_id = %s
     '''
     cursor.execute(query, [str(service_id), str(user_id)])
     res_2 = cursor.fetchall()
@@ -102,7 +103,7 @@ def get_availability(service_id, user_id):
     cursor.execute(query, [str(service_id), str(user_id)])
     res = cursor.fetchone()
     query = '''
-            Select service_id, user_id, `day`, start_time, end_time from availability_times where user_id = %s and service_id = %s
+            Select service_id, user_id, day_name, start_time, end_time from availability_times where service_id = %s and user_id = %s
         '''
     cursor.execute(query, [str(service_id), str(user_id)])
     res_2 = cursor.fetchall()
@@ -112,20 +113,57 @@ def get_availability(service_id, user_id):
 @app.route('/get-availability/<service_id>')
 def get_providers(service_id):
     query = '''
-            SELECT service_id, s.user_id, minimum_price, availability, fname, lname, s.profile_picture_url
+            SELECT service_id, s.user_id, minimum_price, fname, lname, s.profile_picture_url
              FROM availability as a join (Select fname, lname, user_id, profile_picture_url from users) as s on s.user_id = a.user_id WHERE a.service_id=%s
         '''
     cursor.execute(query, [str(service_id)])
     ans = []
+    debug = []
     for res in cursor.fetchall():
         user_id = res[1]
         query = '''
-                Select service_id, user_id, `day`, start_time, end_time from availability_times where user_id = %s and service_id = %s
+                Select service_id, user_id, day_name, start_time, end_time from availability_times where service_id = %s and user_id = %s
             '''
         cursor.execute(query, [str(service_id), str(user_id)])
         res_2 = cursor.fetchall()
+        debug.append((res, res_2, user_id))
         ans.append(publish_availability(res, res_2))
-    return {'status': 201, 'availability': ans}
+    return {'status': 201, 'availability': ans, "debug": debug}
+@app.route('/get-filtered-availability/<service_id>/<min_price>/<day>/<start_time>/<end_time>')
+def get_filtered_availability(service_id, min_price, day, start_time, end_time):
+    if min_price.isnumeric():
+        min_price = float(min_price)
+    else:
+        min_price = float(10000)
+    if start_time.isnumeric():
+        start_t = float(start_time)
+    else:
+        start_t = float(-1)
+    if end_time.isnumeric():
+        end_t = float(end_time)
+    else:
+        end_t = float(10000)
+    if day == '*':
+        day = '%'
+    query = '''
+            SELECT service_id, s.user_id, minimum_price, fname, lname, s.profile_picture_url
+             FROM availability as a join (Select fname, lname, user_id, profile_picture_url from users) as s on s.user_id = a.user_id 
+             WHERE a.service_id = %s and CAST(minimum_price AS float) < %s ORDER BY minimum_price
+        '''
+    cursor.execute(query, [str(service_id), min_price])
+    # return {"debug": (cursor.fetchall(), min_price, day, start_t, end_t)}
+    result = []
+    for res in cursor.fetchall():
+        user_id = res[1]
+        query = '''
+                Select service_id, user_id, day_name, start_time, end_time from availability_times 
+                where service_id = %s and user_id = %s and day_name LIKE %s and CAST(start_time AS float) >= %s and CAST(end_time AS float) <= %s
+                ORDER BY day_name, start_time, end_time
+            '''
+        cursor.execute(query, [str(service_id), str(user_id), str(day), start_t, end_t])
+        res_2 = cursor.fetchall()
+        result.append(publish_availability(res, res_2))
+    return {'status': 201, 'availability': result}
 
 @app.route('/get-all-availability')
 def get_all():
@@ -144,7 +182,15 @@ def get_all_times():
             Select * from availability_times
         '''
     cursor.execute(query, [])
-    ans = []
+    ans = cursor.fetchall()
+    return {'status': 201, 'availability': ans}
+@app.route('/get-all-availability-raw')
+def get_all_raw():
+    query = '''
+            Select * from availability
+        '''
+    cursor.execute(query, [])
+    ans = cursor.fetchall()
     return {'status': 201, 'availability': ans}
 # Helper functions
 def publish_availability(availability, times):
@@ -153,7 +199,7 @@ def publish_availability(availability, times):
     dic = defaultdict(lambda: [])
     for t in times:
         dic[t[2]].append(str(t[3]) + '-' + str(t[4]))
-    availability_times = json.dumps(dic)
+    availability_times = str(dict(dic))
     res = {
         "service_id": availability[0],
         'user_id': availability[1],
