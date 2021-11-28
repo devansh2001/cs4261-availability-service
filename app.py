@@ -7,6 +7,8 @@ import uuid
 import json
 from collections import defaultdict
 from flask_cors import CORS
+import datetime
+import time
 
 app = Flask(__name__)
 # https://stackoverflow.com/a/64657739
@@ -62,6 +64,8 @@ def create_availability():
     for k in availability.keys():
         for a in availability[k]:
             st, et = a.split('-')
+            st = time_to_int(st)
+            et = time_to_int(et)
             query = '''
                     INSERT INTO availability_times (service_id, user_id, day_name, start_time, end_time)
                     VALUES (%s, %s, %s, %s, %s)
@@ -126,9 +130,9 @@ def get_providers(service_id):
             '''
         cursor.execute(query, [str(service_id), str(user_id)])
         res_2 = cursor.fetchall()
-        debug.append((res, res_2, user_id))
+        # debug.append((res, res_2, user_id))
         ans.append(publish_availability(res, res_2))
-    return {'status': 201, 'availability': ans, "debug": debug}
+    return {'status': 201, 'availability': ans}
 @app.route('/get-filtered-availability/<service_id>/<min_price>/<day>/<start_time>/<end_time>')
 def get_filtered_availability(service_id, min_price, day, start_time, end_time):
     if min_price.isnumeric():
@@ -136,13 +140,13 @@ def get_filtered_availability(service_id, min_price, day, start_time, end_time):
     else:
         min_price = float(10000)
     if start_time.isnumeric():
-        start_t = float(start_time)
+        start_t = float(int(start_time) * 3600)
     else:
         start_t = float(-1)
     if end_time.isnumeric():
-        end_t = float(end_time)
+        end_t = float(int(end_time) * 3600)
     else:
-        end_t = float(10000)
+        end_t = float(24 * 3600)
     if day == '*':
         day = '%'
     query = '''
@@ -155,6 +159,7 @@ def get_filtered_availability(service_id, min_price, day, start_time, end_time):
     result = []
     for res in cursor.fetchall():
         user_id = res[1]
+        # return {"debug": [str(service_id), str(user_id), str(day), start_t, end_t]}
         query = '''
                 Select service_id, user_id, day_name, start_time, end_time from availability_times 
                 where service_id = %s and user_id = %s and day_name LIKE %s and CAST(start_time AS float) >= %s and CAST(end_time AS float) <= %s
@@ -162,7 +167,8 @@ def get_filtered_availability(service_id, min_price, day, start_time, end_time):
             '''
         cursor.execute(query, [str(service_id), str(user_id), str(day), start_t, end_t])
         res_2 = cursor.fetchall()
-        result.append(publish_availability(res, res_2))
+        if res_2:
+            result.append(publish_availability(res, res_2))
     return {'status': 201, 'availability': result}
 
 @app.route('/get-all-availability')
@@ -198,7 +204,7 @@ def publish_availability(availability, times):
         return None
     dic = defaultdict(lambda: [])
     for t in times:
-        dic[t[2]].append(str(t[3]) + '-' + str(t[4]))
+        dic[t[2]].append(int_to_time(int(t[3])) + '-' + int_to_time(int(t[4])))
     availability_times = str(dict(dic))
     res = {
         "service_id": availability[0],
@@ -213,6 +219,14 @@ def publish_availability(availability, times):
         res['profile_picture'] = availability[5]
     
     return res
+
+def time_to_int(time_string):
+    date_time = datetime.datetime.strptime(time_string, "%H:%M:%S")
+    a_timedelta = date_time - datetime.datetime(1900, 1, 1)
+    seconds = a_timedelta.total_seconds()
+    return int(seconds)
+def int_to_time(time_int):
+    return time.strftime('%H:%M:%S', time.gmtime(time_int))
 
 # https://www.youtube.com/watch?v=4eQqcfQIWXw
 if __name__ == '__main__':
