@@ -198,6 +198,21 @@ def get_all_raw():
     cursor.execute(query, [])
     ans = cursor.fetchall()
     return {'status': 201, 'availability': ans}
+
+
+@app.route('/get-min-price/<provider_id>/<service_id>')
+def get_min_price(provider_id, service_id):
+    query = '''
+        select min(minimum_price) from availability where service_id=%s and user_id=%s
+    '''
+    result = cursor.execute(query, [provider_id, service_id])
+    min_price = None
+    try:
+        min_price = result[0][0]
+    except:
+        print('error')
+    return {'status': 200, 'min_price': min_price}
+
 # Helper functions
 def publish_availability(availability, times):
     if not availability or len(availability) == 0:
