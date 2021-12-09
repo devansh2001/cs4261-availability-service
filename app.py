@@ -205,8 +205,10 @@ def get_min_price(provider_id, service_id):
     query = '''
         select min(minimum_price) from availability where user_id=%s and service_id=%s
     '''
-    result = cursor.execute(query, [provider_id, service_id])
+    cursor.execute(query, [provider_id, service_id])
     min_price = None
+    result = cursor.fetchall()
+
     try:
         min_price = result[0][0]
     except:
